@@ -12,9 +12,9 @@
 
 #define UART_COMMUNICATION  //use I2C for communication, but use the serial port for communication if the line of codes were masked
 
-#ifdef  I2C_COMMUNICATION
-#define I2C_ADDRESS    0x57
-  DFRobot_BloodOxygen_S_I2C MAX30102(&Wire ,I2C_ADDRESS);
+#ifdef I2C_COMMUNICATION
+#define I2C_ADDRESS 0x57
+DFRobot_BloodOxygen_S_I2C MAX30102(&Wire, I2C_ADDRESS);
 #else
 /* ---------------------------------------------------------------------------------------------------------------
  *    board   |             MCU                | Leonardo/Mega2560/M0 |    UNO    | ESP8266 | ESP32 |  microbit  |
@@ -27,24 +27,22 @@
 SoftwareSerial mySerial(4, 5);
 DFRobot_BloodOxygen_S_SoftWareUart MAX30102(&mySerial, 9600);
 #else
-DFRobot_BloodOxygen_S_HardWareUart MAX30102(&Serial1, 9600); 
+DFRobot_BloodOxygen_S_HardWareUart MAX30102(&Serial1, 9600);
 #endif
 #endif
 
-const int ledPin =  12;      // the number of the LED pin
+const int ledPin = 12;  // the number of the LED pin
 
-void setup()
-{
+void setup() {
   Serial.begin(115200);
-  
+
   initsensor();
 
   pinMode(ledPin, OUTPUT);
 }
 
-void initsensor(){
-while (false == MAX30102.begin())
-  {
+void initsensor() {
+  while (false == MAX30102.begin()) {
     Serial.println("init fail!");
     delay(1000);
   }
@@ -59,45 +57,89 @@ int intervalSensor = 1000;
 
 
 // Variables will change:
-int ledState = LOW;             // ledState used to set the LED
-long previousMillis = 0;        // will store last time LED was updated
+int ledState = LOW;       // ledState used to set the LED
+long previousMillis = 0;  // will store last time LED was updated
 // the follow variables is a long because the time, measured in miliseconds,
 // will quickly become a bigger number than can be stored in an int.
-long interval = 100;           // interval at which to blink (milliseconds)
-long interval2 = 50;  
-long interval3 = 50;  
+long interval = 100;  // interval at which to blink (milliseconds)
+long interval2 = 50;
+long interval3 = 50;
 
 int hrate = 60;
 int mappedDelay;
 int status = 0;
-void loop()
-{
+void loop() {
 
 
-readSensor();
-  
-  
-if(status == 1){
-digitalWrite(ledPin, HIGH);
-  delay(100);
-  digitalWrite(ledPin, LOW);
-  delay(50);
-  digitalWrite(ledPin, HIGH);
-  delay(100);
-  digitalWrite(ledPin, LOW);
+  readSensor();
 
-  delay(mappedDelay);
-} else {
-doTheFade(millis());
+
+  if (status == 1) {
+
+  } else {
+    doTheFade(millis());
+  }
+
+
+
 }
-  
 
-  // if (ledState == LOW) // if the led is OFF then check if its time to blink it 
-  // { 
+int process = 0;
+
+int firstDelay = 50;
+int secondDelay = 100;
+int thirdDelay = 1000;
+
+void ledHartBPM() {
+  // digitalWrite(ledPin, HIGH);
+  // delay(100);
+  // digitalWrite(ledPin, LOW);
+  // delay(50);
+  // digitalWrite(ledPin, HIGH);
+  // delay(100);
+  // digitalWrite(ledPin, LOW);
+
+  // delay(mappedDelay);
+
+  unsigned long currentMillis = millis();
+
+  switch (state) {
+    case 0: // First beat
+      if (currentMillis - previousMillis >= firstDelay) {
+        previousMillis = currentMillis;
+        digitalWrite(ledPin, HIGH);
+        state = 1;
+      }
+      break;
+    case 1: // Pause between beats
+      if (currentMillis - previousMillis >= secondDelay) {
+        previousMillis = currentMillis;
+        digitalWrite(ledPin, LOW);
+        state = 2;
+      }
+      break;
+    case 2: // Second beat
+      if (currentMillis - previousMillis >= firstDelay) {
+        previousMillis = currentMillis;
+        digitalWrite(ledPin, HIGH);
+        state = 3;
+      }
+      break;
+    case 3: // Pause after double beat
+      if (currentMillis - previousMillis >= thirdDelay) {
+        previousMillis = currentMillis;
+        digitalWrite(ledPin, LOW);
+        state = 0;
+      }
+      break;
+  }
+
+    // if (ledState == LOW) // if the led is OFF then check if its time to blink it
+  // {
   //      unsigned long currentMillis = millis();
   //   if(currentMillis - previousMillis > interval) {
-  //     // save the last time you blinked the LED 
-  //     previousMillis = currentMillis;   
+  //     // save the last time you blinked the LED
+  //     previousMillis = currentMillis;
   //     ledState = HIGH;
   //     // set the LED with the ledState of the variable:
   //     digitalWrite(ledPin, ledState);
@@ -107,8 +149,8 @@ doTheFade(millis());
   // {
   //    unsigned long currentMillis = millis();
   //   if(currentMillis - previousMillis > interval2) {
-  //     // save the last time you blinked the LED 
-  //     previousMillis = currentMillis;   
+  //     // save the last time you blinked the LED
+  //     previousMillis = currentMillis;
   //       ledState = LOW;
   //     // set the LED with the ledState of the variable:
   //     digitalWrite(ledPin, ledState);
@@ -116,23 +158,23 @@ doTheFade(millis());
   // }
 }
 
-void readSensor(){
-//if(millis() - prevMil_readSensor > intervalSensor){
-    prevMil_readSensor = millis();
+void readSensor() {
+  //if(millis() - prevMil_readSensor > intervalSensor){
+  prevMil_readSensor = millis();
 
-    MAX30102.getHeartbeatSPO2();
+  MAX30102.getHeartbeatSPO2();
   Serial.print("SPO2 is : ");
   Serial.print(MAX30102._sHeartbeatSPO2.SPO2);
   Serial.println("%");
   Serial.print("heart rate is : ");
   Serial.print(MAX30102._sHeartbeatSPO2.Heartbeat);
-  if(MAX30102._sHeartbeatSPO2.Heartbeat > 0) {
+  if (MAX30102._sHeartbeatSPO2.Heartbeat > 0) {
     hrate = MAX30102._sHeartbeatSPO2.Heartbeat;
     status = 1;
   } else {
     status = 0;
   }
-   Serial.print(" / ");
+  Serial.print(" / ");
   Serial.print(hrate);
   Serial.println(" Times/min");
   Serial.print("Temperature value of the board is : ");
@@ -145,7 +187,7 @@ void readSensor(){
   Serial.print(mappedDelay);
   Serial.println("");
 
- // }
+  // }
 }
 
 
@@ -182,7 +224,7 @@ int fadeAmount = 5;  // how many points to fade the LED by
 
 void doTheFade(unsigned long thisMillis) {
 
-   // set the brightness of pin 9:
+  // set the brightness of pin 9:
   analogWrite(ledPin, brightness);
 
   // change the brightness for next time through the loop:
@@ -194,8 +236,8 @@ void doTheFade(unsigned long thisMillis) {
   }
   // wait for 30 milliseconds to see the dimming effect
   delay(15);
-   // is it time to update yet?
-   // if not, nothing happens
+  // is it time to update yet?
+  // if not, nothing happens
   //  if (thisMillis - previousFadeMillis >= fadeInterval) {
   //     // yup, it's time!
   //     if (fadeDirection == UP) {
