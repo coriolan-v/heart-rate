@@ -31,7 +31,7 @@ DFRobot_BloodOxygen_S_HardWareUart MAX30102(&Serial1, 9600);
 #endif
 #endif
 
-const int ledPin = 12;  // the number of the LED pin
+const int ledPin = 4;  // the number of the LED pin
 
 void setup() {
   Serial.begin(115200);
@@ -39,6 +39,11 @@ void setup() {
   initsensor();
 
   pinMode(ledPin, OUTPUT);
+
+  pinMode(1, OUTPUT);
+  digitalWrite(1, LOW);
+  pinMode(0, INPUT_PULLUP);
+  pinMode(2, INPUT_PULLUP);
 }
 
 void initsensor() {
@@ -70,25 +75,22 @@ int mappedDelay;
 int status = 0;
 void loop() {
 
+  if (digitalRead(2) == LOW) {
+    readSensor();
 
-  readSensor();
-
-
-  if (status == 1) {
-
+    ledHartBPM();
   } else {
-    doTheFade(millis());
+    digitalWrite(ledPin, LOW);
   }
-
-
-
 }
 
 int process = 0;
 
-int firstDelay = 50;
-int secondDelay = 100;
-int thirdDelay = 1000;
+int firstDelay = 100;
+int secondDelay = 50;
+int thirdDelay = 800;
+
+int state = 1;
 
 void ledHartBPM() {
   // digitalWrite(ledPin, HIGH);
@@ -104,28 +106,28 @@ void ledHartBPM() {
   unsigned long currentMillis = millis();
 
   switch (state) {
-    case 0: // First beat
+    case 0:  // First beat
       if (currentMillis - previousMillis >= firstDelay) {
         previousMillis = currentMillis;
         digitalWrite(ledPin, HIGH);
         state = 1;
       }
       break;
-    case 1: // Pause between beats
+    case 1:  // Pause between beats
       if (currentMillis - previousMillis >= secondDelay) {
         previousMillis = currentMillis;
         digitalWrite(ledPin, LOW);
         state = 2;
       }
       break;
-    case 2: // Second beat
+    case 2:  // Second beat
       if (currentMillis - previousMillis >= firstDelay) {
         previousMillis = currentMillis;
         digitalWrite(ledPin, HIGH);
         state = 3;
       }
       break;
-    case 3: // Pause after double beat
+    case 3:  // Pause after double beat
       if (currentMillis - previousMillis >= thirdDelay) {
         previousMillis = currentMillis;
         digitalWrite(ledPin, LOW);
@@ -134,7 +136,7 @@ void ledHartBPM() {
       break;
   }
 
-    // if (ledState == LOW) // if the led is OFF then check if its time to blink it
+  // if (ledState == LOW) // if the led is OFF then check if its time to blink it
   // {
   //      unsigned long currentMillis = millis();
   //   if(currentMillis - previousMillis > interval) {
@@ -159,107 +161,106 @@ void ledHartBPM() {
 }
 
 void readSensor() {
-  //if(millis() - prevMil_readSensor > intervalSensor){
-  prevMil_readSensor = millis();
+  if (millis() - prevMil_readSensor > intervalSensor) {
+    prevMil_readSensor = millis();
 
-  MAX30102.getHeartbeatSPO2();
-  Serial.print("SPO2 is : ");
-  Serial.print(MAX30102._sHeartbeatSPO2.SPO2);
-  Serial.println("%");
-  Serial.print("heart rate is : ");
-  Serial.print(MAX30102._sHeartbeatSPO2.Heartbeat);
-  if (MAX30102._sHeartbeatSPO2.Heartbeat > 0) {
-    hrate = MAX30102._sHeartbeatSPO2.Heartbeat;
-    status = 1;
-  } else {
-    status = 0;
+    MAX30102.getHeartbeatSPO2();
+    Serial.print("SPO2 is : ");
+    Serial.print(MAX30102._sHeartbeatSPO2.SPO2);
+    Serial.println("%");
+    Serial.print("heart rate is : ");
+    Serial.print(MAX30102._sHeartbeatSPO2.Heartbeat);
+    if (MAX30102._sHeartbeatSPO2.Heartbeat > 0) {
+      hrate = MAX30102._sHeartbeatSPO2.Heartbeat;
+      status = 1;
+    } else {
+      status = 0;
+    }
+    Serial.print(" / ");
+    Serial.print(hrate);
+    Serial.println(" Times/min");
+    Serial.print("Temperature value of the board is : ");
+    Serial.print(MAX30102.getTemperature_C());
+    Serial.println(" ℃");
+
+    thirdDelay = map(hrate, 50, 160, 1100, 300);
+
+    Serial.print("thirdDelay: ");
+    Serial.print(thirdDelay);
+    Serial.println("");
   }
-  Serial.print(" / ");
-  Serial.print(hrate);
-  Serial.println(" Times/min");
-  Serial.print("Temperature value of the board is : ");
-  Serial.print(MAX30102.getTemperature_C());
-  Serial.println(" ℃");
-
-  mappedDelay = map(hrate, 50, 160, 1000, 100);
-
-  Serial.print("mappedDelay: ");
-  Serial.print(mappedDelay);
-  Serial.println("");
-
-  // }
 }
 
 
-const byte pwmLED = 5;
+// const byte pwmLED = 5;
 
 // define directions for LED fade
-#define UP 0
-#define DOWN 1
+// #define UP 0
+// #define DOWN 1
 
-// constants for min and max PWM
-const int minPWM = 0;
-const int maxPWM = 255;
+// // constants for min and max PWM
+// const int minPWM = 0;
+// const int maxPWM = 255;
 
-// State Variable for Fade Direction
-byte fadeDirection = UP;
+// // State Variable for Fade Direction
+// byte fadeDirection = UP;
 
-// Global Fade Value
+// // Global Fade Value
 // but be bigger than byte and signed, for rollover
-int fadeValue = 0;
+// int fadeValue = 0;
 
-// How smooth to fade?
-byte fadeIncrement = 5;
+// // How smooth to fade?
+// byte fadeIncrement = 5;
 
-// millis() timing Variable, just for fading
-unsigned long previousFadeMillis;
+// // millis() timing Variable, just for fading
+// unsigned long previousFadeMillis;
 
-// How fast to increment?
-int fadeInterval = 50;
+// // How fast to increment?
+// int fadeInterval = 50;
 
-int led = 9;         // the PWM pin the LED is attached to
-int brightness = 0;  // how bright the LED is
-int fadeAmount = 5;  // how many points to fade the LED by
+// int led = 9;         // the PWM pin the LED is attached to
+// int brightness = 0;  // how bright the LED is
+// int fadeAmount = 5;  // how many points to fade the LED by
 
 
-void doTheFade(unsigned long thisMillis) {
+// void doTheFade(unsigned long thisMillis) {
 
-  // set the brightness of pin 9:
-  analogWrite(ledPin, brightness);
+//   // set the brightness of pin 9:
+//   analogWrite(ledPin, brightness);
 
-  // change the brightness for next time through the loop:
-  brightness = brightness + fadeAmount;
+//   // change the brightness for next time through the loop:
+//   brightness = brightness + fadeAmount;
 
-  // reverse the direction of the fading at the ends of the fade:
-  if (brightness <= 0 || brightness >= 255) {
-    fadeAmount = -fadeAmount;
-  }
-  // wait for 30 milliseconds to see the dimming effect
-  delay(15);
-  // is it time to update yet?
-  // if not, nothing happens
-  //  if (thisMillis - previousFadeMillis >= fadeInterval) {
-  //     // yup, it's time!
-  //     if (fadeDirection == UP) {
-  //        fadeValue = fadeValue + fadeIncrement;
-  //        if (fadeValue >= maxPWM) {
-  //           // At max, limit and change direction
-  //           fadeValue = maxPWM;
-  //           fadeDirection = DOWN;
-  //        }
-  //     } else {
-  //        //if we aren't going up, we're going down
-  //        fadeValue = fadeValue - fadeIncrement;
-  //        if (fadeValue <= minPWM) {
-  //           // At min, limit and change direction
-  //           fadeValue = minPWM;
-  //           fadeDirection = UP;
-  //        }
-  //     }
-  //     // Only need to update when it changes
-  //     analogWrite(pwmLED, fadeValue);
+//   // reverse the direction of the fading at the ends of the fade:
+//   if (brightness <= 0 || brightness >= 255) {
+//     fadeAmount = -fadeAmount;
+//   }
+//   // wait for 30 milliseconds to see the dimming effect
+//   delay(15);
+//   // is it time to update yet?
+//   // if not, nothing happens
+//   //  if (thisMillis - previousFadeMillis >= fadeInterval) {
+//   //     // yup, it's time!
+//   //     if (fadeDirection == UP) {
+//   //        fadeValue = fadeValue + fadeIncrement;
+//   //        if (fadeValue >= maxPWM) {
+//   //           // At max, limit and change direction
+//   //           fadeValue = maxPWM;
+//   //           fadeDirection = DOWN;
+//   //        }
+//   //     } else {
+//   //        //if we aren't going up, we're going down
+//   //        fadeValue = fadeValue - fadeIncrement;
+//   //        if (fadeValue <= minPWM) {
+//   //           // At min, limit and change direction
+//   //           fadeValue = minPWM;
+//   //           fadeDirection = UP;
+//   //        }
+//   //     }
+//   //     // Only need to update when it changes
+//   //     analogWrite(pwmLED, fadeValue);
 
-  //     // reset millis for the next iteration (fade timer only)
-  //     previousFadeMillis = thisMillis;
-  //  }
-}
+//   //     // reset millis for the next iteration (fade timer only)
+//   //     previousFadeMillis = thisMillis;
+//   //  }
+// }
